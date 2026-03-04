@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Teacher Dashboard</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: "Segoe UI", sans-serif;
+    background: #f4f6fb;
+    padding: 30px;
+}
+
+.card {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+button {
+    padding: 8px 14px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #5a67d8;
+}
+
+select {
+    padding: 8px;
+    margin-top: 10px;
+    width: 250px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+th, td {
+    border: 1px solid #ccc;
+    padding: 10px;
+    text-align: center;
+}
+
+th {
+    background: #eef1ff;
+}
+
+.msg {
+    margin-top: 10px;
+    color: green;
+    font-weight: bold;
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+    <div class="header">
+        <h2>Teacher Dashboard</h2>
+        <button onclick="logout()">Logout</button>
+    </div>
+</div>
+
+<div class="card">
+    <h3>📚 Select Subject</h3>
+    <select id="subjectSelect">
+        <option value="">-- Select Subject --</option>
+    </select>
+    <button onclick="loadStudents()">Load Students</button>
+</div>
+
+<div class="card">
+    <h3>📝 Mark Attendance</h3>
+    <div id="studentTable"></div>
+    <button onclick="submitAttendance()">Submit Attendance</button>
+    <div class="msg" id="msg"></div>
+</div>
+
+<script>
+const API = "http://localhost:8080";
+const token = localStorage.getItem("token");
+
+if (!token) {
+    alert("Login again");
+    location.href = "index.html";
+}
+
+const payload = JSON.parse(atob(token.split(".")[1]));
+const teacherUserId = payload.sub;
+
+let currentTeacherId = "";
+let currentSubjectId = "";
+let studentsCache = [];
+
+// STATIC SUBJECT LIST (🔥 FIX)
+const SUBJECTS = [
+    { subjectId: "SUB01", subjectName: "DBMS" },
+    { subjectId: "SUB02", subjectName: "Operating Systems" }
+];
+
+function logout() {
+    localStorage.removeItem("token");
+    location.href = "index.html";
+}
+
+// LOAD SUBJECTS
+async function loadSubjects() {
+
+    const tRes = await fetch(`${API}/admin/teachers`);
+    const teachers = await tRes.json();
+    const teacher = teachers.find(t => t.userId === teacherUserId);
+
+    if (!teacher) {
+        alert("Teacher not found");
+        return;
+    }
+
+    currentTeacherId = teacher.teacherId;
+
+    const select = document.getElementById("subjectSelect");
+    select.innerHTML = `<option value="">-- Select Subject --</option>`;
+
+    const res = await fetch(`${API}/admin/subjects`);
+    const subjects = await res.json(); 
+
+    subjects.forEach(s => {
+        select.innerHTML += `
+            <option value="${s.subjectId}">
+                ${s.subjectName} (${s.subjectId})
+            </option>`;
+    });
+}
+
+// LOAD STUDENTS
+async function loadStudents() {
+    currentSubjectId = subjectSelect.value;
+    if (!currentSubjectId) {
+        alert("Select a subject");
+        return;
+    }
+
+    const res = await fetch(`${API}/admin/students`);
+    studentsCache = await res.json();
+
+    let html = `
+        <table>
+            <tr>
+                <th>Student ID</th>
+                <th>Name</th>
+                <th>Absent ❌</th>
+            </tr>`;
+
+    studentsCache.forEach((s, i) => {
+        html += `
+            <tr>
+                <td>${s.studentId}</td>
+                <td>${s.name}</td>
+                <td><input type="checkbox" id="absent_${i}"></td>
+            </tr>`;
+    });
+
+    html += "</table>";
+    studentTable.innerHTML = html;
+}
+
+// SUBMIT ATTENDANCE
+async function submitAttendance() {
+    const today = new Date().toISOString().split("T")[0];
+
+    for (let i = 0; i < studentsCache.length; i++) {
+        const s = studentsCache[i];
+        const absent = document.getElementById(`absent_${i}`).checked;
+
+        await fetch(`${API}/teacher/mark-attendance`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                studentId: s.studentId,
+                subjectId: currentSubjectId,
+                date: today,
+                status: absent ? "Absent" : "Present",
+                markedBy: currentTeacherId
+            })
+        });
+    }
+
+    msg.innerText = "✅ Attendance marked successfully";
+}
+
+// INIT
+loadSubjects();
+</script>
+
+</body>
+</html>

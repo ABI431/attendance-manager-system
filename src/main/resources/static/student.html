@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Student Dashboard</title>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f4f6fb;
+    padding: 30px;
+}
+
+.card {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+button {
+    padding: 8px 14px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #5a67d8;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+th, td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: center;
+}
+
+th {
+    background: #eef1ff;
+}
+</style>
+</head>
+
+<body>
+
+<!-- HEADER -->
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h2>Student Dashboard</h2>
+        <button onclick="logout()">Logout</button>
+    </div>
+</div>
+
+<!-- STUDENT DETAILS -->
+<div class="card">
+    <h3>👤 Student Details</h3>
+    <p><b>ID:</b> <span id="stuId"></span></p>
+    <p><b>Name:</b> <span id="stuName"></span></p>
+    <p><b>Class:</b> <span id="stuClass"></span></p>
+</div>
+
+<!-- ATTENDANCE SUMMARY -->
+<div class="card">
+    <h3>📊 Attendance Summary</h3>
+    <button onclick="loadAttendance()">Load Attendance</button>
+
+    <table id="summaryTable" style="display:none;">
+        <thead>
+            <tr>
+                <th>S.No</th>
+                <th>Subject</th>
+                <th>Conducted</th>
+                <th>Present</th>
+                <th>Absent</th>
+                <th>Percentage</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+        <tfoot>
+            <tr>
+                <th colspan="2">TOTAL</th>
+                <th id="tConducted">0</th>
+                <th id="tPresent">0</th>
+                <th id="tAbsent">0</th>
+                <th id="tPercent">0%</th>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+
+<!-- ABSENCE DETAILS -->
+<div class="card">
+    <h3>❌ Absence Details</h3>
+    <button onclick="loadAbsenceDetails()">Load Absent Details</button>
+
+    <table id="absenceTable" style="display:none;">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Day</th>
+                <th>Subject</th>
+                <th>Periods Absent</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<script>
+const API = "http://localhost:8080";
+const token = localStorage.getItem("token");
+
+if (!token) {
+    alert("Login again");
+    location.href = "index.html";
+}
+
+// decode JWT
+const payload = JSON.parse(atob(token.split(".")[1]));
+const userId = payload.sub;
+const studentId = "S" + userId.replace("student", "").padStart(2, "0");
+
+// LOGOUT
+function logout() {
+    localStorage.removeItem("token");
+    location.href = "index.html";
+}
+
+// LOAD PROFILE
+async function loadProfile() {
+    const res = await fetch(`${API}/student/${studentId}/profile`, {
+        headers: { Authorization: "Bearer " + token }
+    });
+    const s = await res.json();
+    document.getElementById("stuId").innerText = s.studentId;
+    document.getElementById("stuName").innerText = s.name;
+    document.getElementById("stuClass").innerText = s.className;
+}
+loadProfile();
+
+// LOAD ATTENDANCE
+async function loadAttendance() {
+
+    document.getElementById("summaryTable").style.display = "table";
+
+    const res = await fetch(`${API}/student/${studentId}/attendance-summary`, {
+        headers: { Authorization: "Bearer " + token }
+    });
+
+    const data = await res.json();
+    const tbody = document.querySelector("#summaryTable tbody");
+    tbody.innerHTML = "";
+
+    let totalC = 0, totalP = 0, totalA = 0;
+
+    data.forEach((row, i) => {
+        totalC += row.conducted;
+        totalP += row.present;
+        totalA += row.absent;
+
+        tbody.innerHTML += `
+            <tr>
+                <td>${i + 1}</td>
+                <td>${row.subjectName}</td>
+                <td>${row.conducted}</td>
+                <td>${row.present}</td>
+                <td>${row.absent}</td>
+                <td>${row.percentage.toFixed(2)}%</td>
+            </tr>`;
+    });
+
+    document.getElementById("tConducted").innerText = totalC;
+    document.getElementById("tPresent").innerText = totalP;
+    document.getElementById("tAbsent").innerText = totalA;
+    document.getElementById("tPercent").innerText =
+        totalC === 0 ? "0%" : ((totalP * 100) / totalC).toFixed(2) + "%";
+}
+
+// ✅ FIXED HERE
+async function loadAbsenceDetails() {
+
+    document.getElementById("absenceTable").style.display = "table";
+
+    const res = await fetch(`${API}/student/${studentId}/absence-details`, {
+        headers: { Authorization: "Bearer " + token }
+    });
+
+    const data = await res.json();
+    const tbody = document.querySelector("#absenceTable tbody");
+    tbody.innerHTML = "";
+
+    data.forEach(row => {
+        tbody.innerHTML += `
+            <tr>
+                <td>${row.date}</td>
+                <td>${row.day}</td>
+                <td>${row.subjectName}</td>
+                <td>${row.periodsAbsent}</td>
+            </tr>`;
+    });
+}
+</script>
+
+</body>
+</html>

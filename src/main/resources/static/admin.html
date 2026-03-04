@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Admin Dashboard</title>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f4f6fb;
+    padding: 30px;
+}
+
+.card {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+}
+
+input {
+    display: block;
+    padding: 8px;
+    margin: 8px 0;
+    width: 260px;
+}
+
+button {
+    padding: 8px 14px;
+    cursor: pointer;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 4px;
+}
+
+button:hover {
+    background: #5a67d8;
+}
+
+.msg {
+    margin-top: 8px;
+    color: green;
+    font-weight: bold;
+}
+
+table {
+    border-collapse: collapse;
+    margin-top: 15px;
+    width: 100%;
+}
+
+table, th, td {
+    border: 1px solid #ccc;
+}
+
+th, td {
+    padding: 8px 12px;
+    text-align: center;
+}
+
+.delete {
+    cursor: pointer;
+    color: red;
+    font-weight: bold;
+}
+</style>
+</head>
+
+<body>
+
+<!-- HEADER -->
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h2>Admin Dashboard</h2>
+        <button onclick="logout()">Logout</button>
+    </div>
+</div>
+
+<!-- ADD STUDENT -->
+<div class="card">
+    <h3>➕ Add Student</h3>
+    <input id="s_name" placeholder="Student Name">
+    <input id="s_class" placeholder="Class (CSE-A)">
+    <button onclick="addStudent()">Add Student</button>
+    <div id="studentMsg" class="msg"></div>
+</div>
+
+<!-- ADD TEACHER -->
+<div class="card">
+    <h3>➕ Add Teacher</h3>
+    <input id="t_name" placeholder="Teacher Name">
+    <button onclick="addTeacher()">Add Teacher</button>
+    <div id="teacherMsg" class="msg"></div>
+</div>
+
+<!-- ADD SUBJECT -->
+<div class="card">
+    <h3>➕ Add Subject</h3>
+    <input id="sub_name" placeholder="Subject Name (DBMS)">
+    <button onclick="addSubject()">Add Subject</button>
+    <div id="subjectMsg" class="msg"></div>
+</div>
+
+<!-- VIEW -->
+<div class="card">
+    <h3>📋 View Data</h3>
+    <button onclick="viewStudents()">View Students</button>
+    <button onclick="viewTeachers()">View Teachers</button>
+    <button onclick="viewSubjects()">View Subjects</button>
+    <div id="tableArea"></div>
+</div>
+
+<script>
+const API = "http://localhost:8080";
+const token = localStorage.getItem("token");
+
+if (!token) {
+    alert("Session expired. Login again.");
+    location.href = "index.html";
+}
+
+function logout() {
+    localStorage.removeItem("token");
+    location.href = "index.html";
+}
+
+/* ---------- UTILITY ---------- */
+function getNextId(existingIds, prefix) {
+    const nums = existingIds
+        .map(id => parseInt(id.replace(prefix, "")))
+        .sort((a, b) => a - b);
+
+    let expected = 1;
+    for (let n of nums) {
+        if (n !== expected) break;
+        expected++;
+    }
+    return prefix + String(expected).padStart(2, "0");
+}
+
+/* ---------- ADD STUDENT ---------- */
+async function addStudent() {
+    const name = s_name.value.trim();
+    const className = s_class.value.trim();
+    if (!name || !className) return alert("Enter name & class");
+
+    const students = await (await fetch(`${API}/admin/students`, {
+        headers: { Authorization: "Bearer " + token }
+    })).json();
+
+    const studentId = getNextId(students.map(s => s.studentId), "S");
+    const userId = "student" + studentId.substring(1);
+
+    await fetch(`${API}/admin/add-user`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+        body: JSON.stringify({ userId, password: "stud123", role: "student" })
+    });
+
+    await fetch(`${API}/admin/add-student`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+        body: JSON.stringify({ studentId, userId, name, className })
+    });
+
+    s_name.value = "";
+    s_class.value = "";
+    studentMsg.innerText = "✅ Student added successfully";
+    setTimeout(() => studentMsg.innerText = "", 3000);
+}
+
+/* ---------- ADD TEACHER ---------- */
+async function addTeacher() {
+    const name = t_name.value.trim();
+    if (!name) return alert("Enter teacher name");
+
+    const teachers = await (await fetch(`${API}/admin/teachers`, {
+        headers: { Authorization: "Bearer " + token }
+    })).json();
+
+    const teacherId = getNextId(teachers.map(t => t.teacherId), "T");
+    const userId = "teacher" + teacherId.substring(1);
+
+    await fetch(`${API}/admin/add-user`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+        body: JSON.stringify({ userId, password: "teach123", role: "teacher" })
+    });
+
+    await fetch(`${API}/admin/add-teacher`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+        body: JSON.stringify({ teacherId, userId, name })
+    });
+
+    t_name.value = "";
+    teacherMsg.innerText = "✅ Teacher added successfully";
+    setTimeout(() => teacherMsg.innerText = "", 3000);
+}
+
+/* ---------- ADD SUBJECT ---------- */
+async function addSubject() {
+    const name = sub_name.value.trim();
+    if (!name) return alert("Enter subject name");
+
+    const subjects = await (await fetch(`${API}/admin/subjects`, {
+        headers: { Authorization: "Bearer " + token }
+    })).json();
+
+    const subjectId = getNextId(subjects.map(s => s.subjectId), "SUB");
+
+    const res = await fetch(`${API}/admin/add-subject`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+        body: JSON.stringify({
+            subjectId,
+            subjectName: name,
+            className: "CSE-A"
+        })
+    });
+
+    if (!res.ok) return alert("Failed to add subject");
+
+    sub_name.value = "";
+    subjectMsg.innerText = "✅ Subject added successfully";
+    setTimeout(() => subjectMsg.innerText = "", 3000);
+}
+
+/* ---------- VIEW STUDENTS ---------- */
+async function viewStudents() {
+    const data = await (await fetch(`${API}/admin/students`, {
+        headers: { Authorization: "Bearer " + token }
+    })).json();
+
+    let html = `<h3>Students</h3><table>
+        <tr><th>ID</th><th>User ID</th><th>Name</th><th>Class</th><th>🗑️</th></tr>`;
+
+    data.forEach(s => {
+        html += `<tr>
+            <td>${s.studentId}</td>
+            <td>${s.userId}</td>
+            <td>${s.name}</td>
+            <td>${s.className}</td>
+            <td class="delete" onclick="deleteStudent('${s.studentId}')">🗑️</td>
+        </tr>`;
+    });
+
+    tableArea.innerHTML = html + "</table>";
+}
+
+async function deleteStudent(id) {
+    if (!confirm("Delete student?")) return;
+    await fetch(`${API}/admin/delete-student/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: "Bearer " + token }
+    });
+    viewStudents();
+}
+
+/* ---------- VIEW TEACHERS ---------- */
+async function viewTeachers() {
+    const data = await (await fetch(`${API}/admin/teachers`, {
+        headers: { Authorization: "Bearer " + token }
+    })).json();
+
+    let html = `<h3>Teachers</h3><table>
+        <tr><th>ID</th><th>User ID</th><th>Name</th><th>🗑️</th></tr>`;
+
+    data.forEach(t => {
+        html += `<tr>
+            <td>${t.teacherId}</td>
+            <td>${t.userId}</td>
+            <td>${t.name}</td>
+            <td class="delete" onclick="deleteTeacher('${t.teacherId}')">🗑️</td>
+        </tr>`;
+    });
+
+    tableArea.innerHTML = html + "</table>";
+}
+
+async function deleteTeacher(id) {
+    if (!confirm("Delete teacher?")) return;
+    await fetch(`${API}/admin/delete-teacher/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: "Bearer " + token }
+    });
+    viewTeachers();
+}
+
+/* ---------- VIEW SUBJECTS ---------- */
+async function viewSubjects() {
+    const res = await fetch(`${API}/admin/subjects`, {
+        headers: { Authorization: "Bearer " + token }
+    });
+
+    const data = await res.json();
+
+    let html = `<h3>Subjects</h3><table>
+        <tr>
+            <th>Subject ID</th>
+            <th>Subject Name</th>
+            <th>🗑️</th>
+        </tr>`;
+
+    data.forEach(s => {
+        html += `<tr>
+            <td>${s.subjectId}</td>
+            <td>${s.subjectName}</td>
+            <td class="delete" onclick="deleteSubject('${s.subjectId}')">🗑️</td>
+        </tr>`;
+    });
+
+    tableArea.innerHTML = html + "</table>";
+}
+
+/* ---------- DELETE SUBJECT ---------- */
+async function deleteSubject(id) {
+    if (!confirm("Delete subject?")) return;
+
+    await fetch(`${API}/admin/delete-subject/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: "Bearer " + token }
+    });
+
+    viewSubjects();
+}
+</script>
+
+</body>
+</html>
