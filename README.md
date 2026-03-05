@@ -1,4 +1,4 @@
-Attendance Manager System
+# Attendance Manager System
 
 A cloud-based Attendance Management System built using Spring Boot, MySQL, and HTML/CSS/JavaScript.
 This system allows administrators to manage students and teachers, teachers to mark attendance, and students to view their attendance records.
@@ -7,10 +7,10 @@ The project is deployed online and uses a cloud database, so it works without ne
 
 ---
 
-# 🚀 Live Application:
+## 🚀 Live Application:
 ## https://attendance-manager-iv2y.onrender.com/index.html
 
-(Initial boot may take sometimes as it is working in free tier. And server will shutdown after inactivity of 15 minutes.)
+- (Initial boot may take sometimes as it is working in free tier. And server will shutdown after inactivity of 15 minutes.)
 ---
 
 🏗 System Architecture
