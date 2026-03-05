@@ -131,6 +131,26 @@ Tables include:
 - Email notifications
 - Mobile-friendly UI
 - Export attendance reports (PDF / Excel)
+---
+
+### Live Demo
+
+You can try the system using these demo accounts.
+
+Admin Login
+- Username: admin**
+- Password: ********
+
+Teacher Login
+- Username: teacher03
+- Password: teach123
+
+Student Login
+- Username: student03
+- Password: stud123
+
+Open the application:
+https://attendance-manager-iv2y.onrender.com/index.html
 
 ---
 
