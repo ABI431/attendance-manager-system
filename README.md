@@ -10,6 +10,7 @@ The project is deployed online and uses a cloud database, so it works without ne
 # 🚀 Live Application:
 ## https://attendance-manager-iv2y.onrender.com/index.html
 
+(Initial boot may take sometimes as it is working in free tier. And server will shutdown after inactivity of 15 minutes.)
 ---
 
 🏗 System Architecture
