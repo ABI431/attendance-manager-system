@@ -27,6 +27,6 @@ public class HomeController {
 
     @GetMapping("/")
     public String home() {
-        return "Attendance Manager Backend is running!";
+        return "redirect:/index.html";
     }
 }
