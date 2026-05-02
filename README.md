@@ -7,6 +7,8 @@ The project is deployed online and uses a cloud database, so it works without ne
 
 ---
 
+❌currently not working, due to limitation of credits
+
 ## 🚀 Live Application:
 ## https://attendance-manager-iv2y.onrender.com/index.html
 
